@@ -1,0 +1,7 @@
+{% set domain = 'consentmanager.bo.default' %}
+<div class="card">
+	<div class="card-body">
+		<p>{{ 'The consent manager has its own screens.'|trans({}, domain) }}</p>
+		<a class="btn btn-primary btn-sm" href="{{ path('consentmanager.admin.settings') }}">{{ 'Open the consent manager'|trans({}, domain) }}</a>
+	</div>
+</div>

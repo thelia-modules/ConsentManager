@@ -1,0 +1,54 @@
+{% extends 'base.html.twig' %}
+
+{% set domain = 'consentmanager.fo.default' %}
+
+{% block title %}{{ 'Cookie policy'|trans({}, domain) }}{% endblock %}
+
+{% block body %}
+    <div class="container-l pt-10 pb-15 flex flex-col gap-6" data-testid="consent-manager-policy">
+        <h1 class="h3">{{ 'Cookie policy'|trans({}, domain) }}</h1>
+        <p class="paragraph-3">{{ 'A cookie is a small file a site stores in your browser. Below are the categories of cookies this shop uses, what each is for, and the services behind them. Only the strictly necessary ones are set without your consent.'|trans({}, domain) }}</p>
+        <p>
+            <twig:Molecules:Button:Base color="secondary" text="{{ 'Change my choices'|trans({}, domain) }}" data-consent-open />
+        </p>
+
+        {% for category in consent.categories %}
+            <section class="flex flex-col gap-3" data-testid="consent-manager-policy-category-{{ category.code }}">
+                <h2 class="h5">{{ category.title }}{% if category.required %} <span class="paragraph-5 text-grey-dark">({{ 'always active'|trans({}, domain) }})</span>{% endif %}</h2>
+                {% if category.description %}<p class="paragraph-4">{{ category.description }}</p>{% endif %}
+                {% if category.services is empty %}
+                    <p class="paragraph-5 text-grey-dark">{{ 'No service in this category.'|trans({}, domain) }}</p>
+                {% else %}
+                    <div class="overflow-x-auto">
+                        <table class="w-full paragraph-5">
+                            <thead>
+                                <tr>
+                                    <th scope="col" class="text-start py-2 pe-4">{{ 'Service'|trans({}, domain) }}</th>
+                                    <th scope="col" class="text-start py-2 pe-4">{{ 'Provider'|trans({}, domain) }}</th>
+                                    <th scope="col" class="text-start py-2 pe-4">{{ 'Purpose'|trans({}, domain) }}</th>
+                                    <th scope="col" class="text-start py-2">{{ 'Cookies'|trans({}, domain) }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for service in category.services %}
+                                    <tr class="border-t border-grey-lighter" data-testid="consent-manager-policy-service-{{ service.code }}">
+                                        <td class="py-2 pe-4">
+                                            {% if service.privacyUrl %}
+                                                <a href="{{ service.privacyUrl }}" class="underline" target="_blank" rel="noopener noreferrer">{{ service.title }}</a>
+                                            {% else %}
+                                                {{ service.title }}
+                                            {% endif %}
+                                        </td>
+                                        <td class="py-2 pe-4">{{ service.provider }}</td>
+                                        <td class="py-2 pe-4">{{ service.description }}</td>
+                                        <td class="py-2"><span dir="ltr">{{ service.cookies|join(', ') }}</span></td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% endif %}
+            </section>
+        {% endfor %}
+    </div>
+{% endblock %}

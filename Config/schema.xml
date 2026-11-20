@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<database defaultIdMethod="native" name="TheliaMain"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:noNamespaceSchemaLocation="../../../../core/vendor/propel/propel/resources/xsd/database.xsd" >
+
+    <!-- A group of services the visitor accepts or refuses at once. -->
+    <table name="consent_category" namespace="ConsentManager\Model">
+        <column name="id" primaryKey="true" autoIncrement="true" required="true" type="INTEGER" />
+        <column name="code" required="true" size="64" type="VARCHAR" />
+        <column name="required" required="true" defaultValue="0" type="TINYINT" />
+        <column name="position" required="true" defaultValue="0" type="INTEGER" />
+        <column name="title" size="255" type="VARCHAR" />
+        <column name="description" type="CLOB" />
+        <unique name="consent_category_code_unique">
+            <unique-column name="code" />
+        </unique>
+        <behavior name="timestampable" />
+        <behavior name="i18n">
+            <parameter name="i18n_columns" value="title, description" />
+        </behavior>
+    </table>
+
+    <!-- A service typed by the merchant, or the category the merchant chose for a service a module declares. -->
+    <table name="consent_service" namespace="ConsentManager\Model">
+        <column name="id" primaryKey="true" autoIncrement="true" required="true" type="INTEGER" />
+        <column name="code" required="true" size="64" type="VARCHAR" />
+        <column name="category_id" required="true" type="INTEGER" />
+        <column name="custom" required="true" defaultValue="0" type="TINYINT" />
+        <column name="provider" size="255" type="VARCHAR" />
+        <column name="cookies" type="CLOB" />
+        <column name="privacy_url" size="255" type="VARCHAR" />
+        <column name="title" size="255" type="VARCHAR" />
+        <column name="description" type="CLOB" />
+        <unique name="consent_service_code_unique">
+            <unique-column name="code" />
+        </unique>
+        <foreign-key foreignTable="consent_category" name="fk_consent_service_category_id" onDelete="CASCADE" onUpdate="RESTRICT">
+            <reference foreign="id" local="category_id" />
+        </foreign-key>
+        <behavior name="timestampable" />
+        <behavior name="i18n">
+            <parameter name="i18n_columns" value="title, description" />
+        </behavior>
+    </table>
+
+    <!-- What the visitor was shown: one row per change of the banner, its categories or its services. -->
+    <table name="consent_policy" namespace="ConsentManager\Model">
+        <column name="id" primaryKey="true" autoIncrement="true" required="true" type="INTEGER" />
+        <column name="snapshot_hash" required="true" size="64" type="CHAR" />
+        <column name="snapshot" required="true" type="CLOB" />
+        <column name="created_at" required="true" type="TIMESTAMP" />
+        <unique name="consent_policy_snapshot_hash_unique">
+            <unique-column name="snapshot_hash" />
+        </unique>
+    </table>
+
+    <!-- The proof of one choice. Written once, never updated. -->
+    <table name="consent_record" namespace="ConsentManager\Model">
+        <column name="id" primaryKey="true" autoIncrement="true" required="true" type="INTEGER" />
+        <column name="visitor_id" required="true" size="36" type="CHAR" />
+        <column name="policy_id" required="true" type="INTEGER" />
+        <column name="accepted" required="true" type="CLOB" />
+        <column name="refused" required="true" type="CLOB" />
+        <column name="created_at" required="true" type="TIMESTAMP" />
+        <index name="idx_consent_record_visitor_id">
+            <index-column name="visitor_id" />
+        </index>
+        <index name="idx_consent_record_created_at">
+            <index-column name="created_at" />
+        </index>
+        <foreign-key foreignTable="consent_policy" name="fk_consent_record_policy_id" onDelete="RESTRICT" onUpdate="RESTRICT">
+            <reference foreign="id" local="policy_id" />
+        </foreign-key>
+    </table>
+</database>

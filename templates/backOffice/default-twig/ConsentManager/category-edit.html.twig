@@ -1,0 +1,37 @@
+{% extends '@ConsentManagerModule/backOffice/default-twig/ConsentManager/_layout.html.twig' %}
+
+{% set page_title = id ? 'Edit a category'|trans({}, 'consentmanager.bo.default') : 'Add a category'|trans({}, 'consentmanager.bo.default') %}
+
+{% block page %}
+	<form method="post" action="{{ path('consentmanager.admin.category.save') }}" data-testid="consentmanager-category-form">
+		<input type="hidden" name="_token" value="{{ assignToken() }}">
+		<input type="hidden" name="id" value="{{ id }}">
+
+		<div class="mb-3">
+			<label class="form-label" for="category-code">{{ 'Code'|trans({}, domain) }}</label>
+			<input class="form-control" id="category-code" name="code" value="{{ code }}" pattern="[a-z0-9_]{1,64}" {{ id ? 'readonly' : 'required' }}>
+			<div class="form-text">{{ 'Lowercase letters, digits and underscores. A module names the category of its services by this code.'|trans({}, domain) }}</div>
+		</div>
+		<div class="form-check mb-3">
+			<input class="form-check-input" type="checkbox" id="category-required" name="required" value="1" {{ required ? 'checked' }}>
+			<label class="form-check-label" for="category-required">{{ 'Strictly necessary: always active, the visitor cannot refuse it'|trans({}, domain) }}</label>
+		</div>
+
+		{% for locale, text in texts %}
+			<fieldset class="mb-3">
+				<legend class="h6">{{ text.language }}</legend>
+				<div class="mb-2">
+					<label class="form-label" for="title-{{ locale }}">{{ 'Title'|trans({}, domain) }}</label>
+					<input class="form-control" id="title-{{ locale }}" name="texts[{{ locale }}][title]" value="{{ text.title }}" maxlength="255">
+				</div>
+				<div>
+					<label class="form-label" for="description-{{ locale }}">{{ 'Description'|trans({}, domain) }}</label>
+					<textarea class="form-control" id="description-{{ locale }}" name="texts[{{ locale }}][description]" rows="3">{{ text.description }}</textarea>
+				</div>
+			</fieldset>
+		{% endfor %}
+
+		<button type="submit" class="btn btn-primary btn-sm">{{ 'Save'|trans({}, domain) }}</button>
+		<a class="btn btn-outline-secondary btn-sm" href="{{ path('consentmanager.admin.categories') }}">{{ 'Cancel'|trans({}, domain) }}</a>
+	</form>
+{% endblock %}

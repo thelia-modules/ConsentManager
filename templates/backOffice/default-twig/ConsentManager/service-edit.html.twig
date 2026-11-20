@@ -1,0 +1,57 @@
+{% extends '@ConsentManagerModule/backOffice/default-twig/ConsentManager/_layout.html.twig' %}
+
+{% set page_title = existing ? 'Edit a service'|trans({}, 'consentmanager.bo.default') : 'Add a service'|trans({}, 'consentmanager.bo.default') %}
+
+{% block page %}
+	<form method="post" action="{{ path('consentmanager.admin.service.save') }}" data-testid="consentmanager-service-form">
+		<input type="hidden" name="_token" value="{{ assignToken() }}">
+		<input type="hidden" name="existing" value="{{ existing ? code : '' }}">
+
+		<div class="row g-3 mb-3">
+			<div class="col-md-6">
+				<label class="form-label" for="service-code">{{ 'Code'|trans({}, domain) }}</label>
+				<input class="form-control" id="service-code" name="code" value="{{ code }}" pattern="[a-z0-9_]{1,64}" {{ existing ? 'readonly' : 'required' }}>
+			</div>
+			<div class="col-md-6">
+				<label class="form-label" for="service-category">{{ 'Category'|trans({}, domain) }}</label>
+				<select class="form-select" id="service-category" name="category" required>
+					{% for item in categories %}
+						<option value="{{ item.code }}" {{ item.code == category ? 'selected' }}>{{ item.title }}</option>
+					{% endfor %}
+				</select>
+			</div>
+			<div class="col-md-6">
+				<label class="form-label" for="service-provider">{{ 'Provider'|trans({}, domain) }}</label>
+				<input class="form-control" id="service-provider" name="provider" value="{{ provider }}" maxlength="255">
+			</div>
+			<div class="col-md-6">
+				<label class="form-label" for="service-privacy">{{ 'Privacy policy address'|trans({}, domain) }}</label>
+				<input class="form-control" type="url" id="service-privacy" name="privacy_url" value="{{ privacy_url }}" maxlength="255">
+			</div>
+			<div class="col-12">
+				<label class="form-label" for="service-cookies">{{ 'Cookies'|trans({}, domain) }}</label>
+				<input class="form-control" id="service-cookies" name="cookies" value="{{ cookies }}">
+				<div class="form-text">{{ 'Names separated by commas. End a name with * to match a prefix (_ga*). They are deleted when the visitor refuses the category.'|trans({}, domain) }}</div>
+			</div>
+		</div>
+
+		{% for locale, text in texts %}
+			<fieldset class="mb-3">
+				<legend class="h6">{{ text.language }}</legend>
+				<div class="mb-2">
+					<label class="form-label" for="title-{{ locale }}">{{ 'Title'|trans({}, domain) }}</label>
+					<input class="form-control" id="title-{{ locale }}" name="texts[{{ locale }}][title]" value="{{ text.title }}" maxlength="255">
+				</div>
+				<div>
+					<label class="form-label" for="description-{{ locale }}">{{ 'Purpose'|trans({}, domain) }}</label>
+					<textarea class="form-control" id="description-{{ locale }}" name="texts[{{ locale }}][description]" rows="2">{{ text.description }}</textarea>
+				</div>
+			</fieldset>
+		{% endfor %}
+
+		<p class="text-muted small">{{ 'A service added here is listed to visitors; its script still has to be held back, by a module or by the theme, until its category is accepted.'|trans({}, domain) }}</p>
+
+		<button type="submit" class="btn btn-primary btn-sm">{{ 'Save'|trans({}, domain) }}</button>
+		<a class="btn btn-outline-secondary btn-sm" href="{{ path('consentmanager.admin.services') }}">{{ 'Cancel'|trans({}, domain) }}</a>
+	</form>
+{% endblock %}
