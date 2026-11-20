@@ -23,6 +23,12 @@ final class ConsentPolicyRegistryTest extends IntegrationTestCase
 {
     use ActivatesConsentManager;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->forgetCachedConsentData();
+    }
+
     public function testAChangedTextIsANewVersionAndTheOldTextFindsItsOldVersion(): void
     {
         $registry = $this->getService(ConsentPolicyRegistry::class);

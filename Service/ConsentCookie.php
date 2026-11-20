@@ -14,6 +14,8 @@ declare(strict_types=1);
 
 namespace ConsentManager\Service;
 
+use Symfony\Component\HttpFoundation\Request;
+
 /**
  * The strictly necessary cookie that remembers a choice: `<policy>|<visitor>|<a.b.c>`.
  *
@@ -23,6 +25,9 @@ namespace ConsentManager\Service;
 final readonly class ConsentCookie
 {
     public const NAME = 'thelia_consent';
+
+    /** A headless front on another domain sends the cookie value in this header instead. */
+    public const HEADER = 'X-Thelia-Consent';
 
     private const VISITOR_PATTERN = '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/';
 
@@ -55,6 +60,16 @@ final readonly class ConsentCookie
         }
 
         return new self((int) $parts[0], $parts[1], $accepted);
+    }
+
+    /** The choice the request carries, whatever policy it was made under. */
+    public static function fromRequest(?Request $request): ?self
+    {
+        if (null === $request) {
+            return null;
+        }
+
+        return self::parse($request->headers->get(self::HEADER) ?? $request->cookies->get(self::NAME));
     }
 
     public static function isVisitorId(string $value): bool

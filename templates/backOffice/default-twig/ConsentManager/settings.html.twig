@@ -26,6 +26,10 @@
 							<label class="form-label" for="banner-text-{{ locale }}">{{ 'Text'|trans({}, domain) }}</label>
 							<textarea class="form-control" id="banner-text-{{ locale }}" name="banner[{{ locale }}][text]" rows="3">{{ banner.text }}</textarea>
 						</div>
+						<div class="mt-2">
+							<label class="form-label" for="policy-intro-{{ locale }}">{{ 'Introduction of the cookie policy page'|trans({}, domain) }}</label>
+							<textarea class="form-control" id="policy-intro-{{ locale }}" name="banner[{{ locale }}][intro]" rows="3">{{ banner.intro }}</textarea>
+						</div>
 					</fieldset>
 				{% endfor %}
 			</div>

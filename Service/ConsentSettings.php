@@ -24,6 +24,7 @@ class ConsentSettings
 {
     public const BANNER_TITLE = 'banner_title';
     public const BANNER_TEXT = 'banner_text';
+    public const POLICY_INTRO = 'policy_intro';
     public const LIFETIME_DAYS = 'consent_lifetime_days';
     public const RETENTION_DAYS = 'record_retention_days';
 
@@ -41,6 +42,16 @@ class ConsentSettings
     public function bannerText(string $locale): string
     {
         return (string) ConsentManager::getConfigValue(self::BANNER_TEXT, '', $locale);
+    }
+
+    public function policyIntro(string $locale): string
+    {
+        return (string) ConsentManager::getConfigValue(self::POLICY_INTRO, '', $locale);
+    }
+
+    public function savePolicyIntro(string $locale, string $text): void
+    {
+        ConsentManager::setConfigValue(self::POLICY_INTRO, $text, $locale);
     }
 
     public function lifetimeDays(): int

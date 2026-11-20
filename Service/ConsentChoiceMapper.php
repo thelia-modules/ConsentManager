@@ -34,7 +34,7 @@ final readonly class ConsentChoiceMapper
         $choice->refused = $record->getRefusedCategories();
         $createdAt = $record->getCreatedAt();
         $choice->recordedAt = null === $createdAt ? null : \DateTimeImmutable::createFromInterface($createdAt);
-        $choice->current = $choice->policy === (int) $this->policies->current()->getId();
+        $choice->current = $choice->policy === $this->policies->currentId();
         $choice->cookie = (new ConsentCookie($choice->policy, $choice->visitorId, $choice->accepted))->format();
         $choice->maxAge = $this->settings->lifetimeDays() * 86400;
 

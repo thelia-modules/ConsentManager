@@ -61,6 +61,7 @@
                                         <strong>{{ service.title }}</strong>{% if service.provider %} ({{ service.provider }}){% endif %}
                                         {% if service.description %}<br>{{ service.description }}{% endif %}
                                         {% if service.cookies is not empty %}<br>{{ 'Cookies: %names%'|trans({'%names%': service.cookies|join(', ')}, domain) }}{% endif %}
+                                        {% if service.duration %}<br>{{ 'Lifetime: %duration%'|trans({'%duration%': service.duration}, domain) }}{% endif %}
                                         {% if service.privacyUrl %}<br><a href="{{ service.privacyUrl }}" target="_blank" rel="noopener noreferrer" class="underline">{{ 'Privacy policy'|trans({}, domain) }}</a>{% endif %}
                                     </li>
                                 {% endfor %}
@@ -83,7 +84,7 @@
     policy: consent.policy,
     cookieName: consent.cookieName,
     lifetimeDays: consent.lifetimeDays,
-    endpoint: '/api/front/consents',
+    endpoint: '/api/front/consent',
     categories: consent.categories|map(category => {
         code: category.code,
         required: category.required,

@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace ConsentManager\Service;
 
+use ConsentManager\Contract\ConsentStateInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 
 /**
@@ -23,7 +24,7 @@ use Symfony\Component\HttpFoundation\RequestStack;
  * kept out of the shared cache). A cached page must emit its scripts through
  * {@see ScriptGate} and let the browser decide.
  */
-class ConsentState
+class ConsentState implements ConsentStateInterface
 {
     public function __construct(
         private readonly RequestStack $requestStack,
@@ -34,14 +35,9 @@ class ConsentState
 
     public function cookie(): ?ConsentCookie
     {
-        $request = $this->requestStack->getCurrentRequest();
-        if (null === $request) {
-            return null;
-        }
+        $cookie = ConsentCookie::fromRequest($this->requestStack->getCurrentRequest());
 
-        $cookie = ConsentCookie::parse($request->cookies->get(ConsentCookie::NAME));
-
-        return null !== $cookie && $cookie->policyId === (int) $this->policies->current()->getId() ? $cookie : null;
+        return null !== $cookie && $cookie->policyId === $this->policies->currentId() ? $cookie : null;
     }
 
     public function hasChosen(): bool
@@ -51,11 +47,11 @@ class ConsentState
 
     public function isCategoryGranted(string $categoryCode): bool
     {
-        if (\in_array($categoryCode, $this->catalog->requiredCategoryCodes(), true)) {
+        if (\in_array($categoryCode, $this->catalog->cachedRequiredCategoryCodes(), true)) {
             return true;
         }
 
-        return \in_array($categoryCode, $this->cookie()?->accepted ?? [], true);
+        return \in_array($categoryCode, $this->cookie()->accepted ?? [], true);
     }
 
     public function isServiceGranted(string $serviceCode): bool

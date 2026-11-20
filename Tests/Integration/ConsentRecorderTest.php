@@ -25,6 +25,12 @@ final class ConsentRecorderTest extends IntegrationTestCase
 {
     use ActivatesConsentManager;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->forgetCachedConsentData();
+    }
+
     private function recorder(): ConsentRecorder
     {
         return $this->getService(ConsentRecorder::class);

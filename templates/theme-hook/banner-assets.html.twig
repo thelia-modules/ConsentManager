@@ -130,7 +130,7 @@
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-            body: JSON.stringify({ visitorId: previous ? previous.visitorId : null, policy: config.policy, accepted: accepted, refused: refused }),
+            body: JSON.stringify({ policy: config.policy, accepted: accepted, refused: refused }),
         }).then(function (response) {
             if (!response.ok) {
                 throw new Error('Consent not recorded: HTTP ' + response.status);

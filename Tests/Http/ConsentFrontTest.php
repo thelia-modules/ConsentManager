@@ -15,7 +15,10 @@ declare(strict_types=1);
 namespace ConsentManager\Tests\Http;
 
 use ConsentManager\Model\ConsentRecordQuery;
+use ConsentManager\Service\ConsentPolicyRegistry;
+use ConsentManager\Service\ConsentRecorder;
 use ConsentManager\Tests\ActivatesConsentManager;
+use Symfony\Component\BrowserKit\Cookie;
 use Thelia\Test\WebIntegrationTestCase;
 
 /**
@@ -25,6 +28,12 @@ use Thelia\Test\WebIntegrationTestCase;
 final class ConsentFrontTest extends WebIntegrationTestCase
 {
     use ActivatesConsentManager;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->forgetCachedConsentData();
+    }
 
     public function testTheBannerIsInThePageForEveryoneAndNoOptionalCookieIsSetBeforeAChoice(): void
     {
@@ -63,7 +72,7 @@ final class ConsentFrontTest extends WebIntegrationTestCase
 
     public function testAChoiceIsRecordedAndReadBackThroughTheApi(): void
     {
-        $this->client->request('POST', '/api/front/consents', server: ['CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'application/json'], content: json_encode(['accepted' => ['analytics'], 'refused' => ['marketing']]));
+        $this->client->request('POST', '/api/front/consent', server: ['CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'application/json'], content: json_encode(['accepted' => ['analytics'], 'refused' => ['marketing']]));
 
         self::assertSame(201, $this->client->getResponse()->getStatusCode(), (string) $this->client->getResponse()->getContent());
         $choice = json_decode((string) $this->client->getResponse()->getContent(), true);
@@ -72,14 +81,44 @@ final class ConsentFrontTest extends WebIntegrationTestCase
         self::assertStringStartsWith($choice['policy'].'|'.$choice['visitorId'].'|', $choice['cookie']);
         self::assertSame(1, ConsentRecordQuery::create()->filterByVisitorId($choice['visitorId'])->count());
 
-        $this->client->request('GET', '/api/front/consents/'.$choice['visitorId'], server: ['HTTP_ACCEPT' => 'application/json']);
+        $this->client->request('GET', '/api/front/consent', server: ['HTTP_ACCEPT' => 'application/json', 'HTTP_X_THELIA_CONSENT' => $choice['cookie']]);
         self::assertSame(200, $this->client->getResponse()->getStatusCode());
-        self::assertTrue(json_decode((string) $this->client->getResponse()->getContent(), true)['current']);
+        $read = json_decode((string) $this->client->getResponse()->getContent(), true);
+        self::assertSame($choice['visitorId'], $read['visitorId']);
+        self::assertTrue($read['current'], json_encode($read).' vs '.json_encode($choice));
+    }
+
+    public function testNobodyReadsOrExtendsTheChoiceOfSomebodyElse(): void
+    {
+        $victim = $this->getService(ConsentRecorder::class)->record(null, null, [], []);
+
+        $this->client->request('GET', '/api/front/consent', server: ['HTTP_ACCEPT' => 'application/json']);
+        self::assertSame(404, $this->client->getResponse()->getStatusCode(), 'no consent cookie, no choice to read');
+
+        $this->client->request('POST', '/api/front/consent', server: ['CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'application/json'], content: json_encode(['visitorId' => $victim->getVisitorId(), 'accepted' => ['analytics', 'marketing']]));
+        self::assertSame(201, $this->client->getResponse()->getStatusCode());
+        self::assertNotSame($victim->getVisitorId(), json_decode((string) $this->client->getResponse()->getContent(), true)['visitorId'], 'a visitor id named in the body is ignored');
+        self::assertSame(1, ConsentRecordQuery::create()->filterByVisitorId($victim->getVisitorId())->count());
+    }
+
+    public function testTwoVisitorsWithDifferentChoicesReceiveTheSameBanner(): void
+    {
+        $policy = $this->getService(ConsentPolicyRegistry::class)->currentId();
+        $banners = [];
+        foreach (['necessary.analytics.marketing', 'necessary'] as $accepted) {
+            $this->client->getCookieJar()->clear();
+            $this->client->getCookieJar()->set(new Cookie('thelia_consent', $policy.'|0b3bbec7-abb3-4433-80c5-f94f2b10fa6d|'.$accepted));
+            $this->assertPageRenders('/');
+            $crawler = $this->client->getCrawler();
+            $banners[] = $crawler->filter('#consent-manager')->outerHtml().$crawler->filter('#consent-manager-config')->outerHtml();
+        }
+
+        self::assertSame($banners[0], $banners[1], 'the choice is applied in the browser: a shared cache can serve the page to both');
     }
 
     public function testRefusingTheNecessaryCategoryIsRejectedByTheApi(): void
     {
-        $this->client->request('POST', '/api/front/consents', server: ['CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'application/json'], content: json_encode(['accepted' => [], 'refused' => ['necessary']]));
+        $this->client->request('POST', '/api/front/consent', server: ['CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'application/json'], content: json_encode(['accepted' => [], 'refused' => ['necessary']]));
 
         self::assertSame(422, $this->client->getResponse()->getStatusCode());
     }

@@ -25,12 +25,14 @@ Modules → Consent manager:
 
 | Screen | What it does |
 |---|---|
-| Banner and durations | Banner title and text per language (empty: the module wording), how long a choice is kept before asking again (180 days by default, 395 at most), how long a proof is kept (0: forever) |
+| Banner and durations | Banner title and text, and the introduction of the cookie policy page, per language (empty: the module wording); how long a choice is kept before asking again (180 days by default, 395 at most); how long a proof is kept (0: forever) |
 | Categories | Add, describe, reorder and delete categories. Three to start with: `necessary` (strictly necessary), `analytics`, `marketing` |
 | Services | Services declared by modules and services added by hand; move any of them to another category |
-| Proofs of consent | Find the proofs of a visitor from their identifier, and the exact content of the policy version they saw |
+| Proofs of consent | Find the proofs of a visitor from their identifier, and the exact content of the policy version they saw. Needs the "Consent manager: proofs of consent" right of its own: the right on modules does not grant it |
 
 Any change to the banner, the categories or the services publishes a new policy version, and visitors are asked again.
+
+What every page needs (texts, categories, services, policy version) is kept in the application cache: showing the banner reads nothing from the database. A change in the back-office refreshes it at once.
 
 ## Retention
 
@@ -43,7 +45,7 @@ php Thelia maintenance:purge
 
 ## For a module that loads a third-party script
 
-Two steps, and no dependency on this module: both use string identifiers, so the module keeps working when the consent manager is not installed.
+Two steps. Both go through string identifiers and the published interfaces of `ConsentManager\Contract`, so the module keeps working when the consent manager is not installed, and a project using a commercial consent platform can register its own implementation under the same service ids.
 
 1. Declare the service, by listening to `consent_manager.services.collect`:
 
@@ -65,7 +67,8 @@ final class MyConsentDeclaration
             cookies: ['_mw', '_mw_*'],          // deleted when the visitor refuses; * matches a prefix
             privacyUrl: 'https://widget.example/privacy',
             description: 'Shows the widget.',
-            translationDomain: 'mymodule',      // title and description are translated in it
+            translationDomain: 'mymodule',      // title, description and duration are translated in it
+            duration: '13 months',              // how long its cookies last
         ));
     }
 }
@@ -78,23 +81,25 @@ final class MyConsentDeclaration
 $services->get(MyThemeHook::class)
     ->arg('$consentGate', service('consent_manager.script_gate')->nullOnInvalid());
 
-// MyThemeHook
+// MyThemeHook, with a ?object $consentGate argument: typed loosely so the class loads without the module
 $html = $this->twig->render('@MyModuleModule/script.html.twig');
 
-return null !== $this->consentGate ? $this->consentGate->gate($html, 'my_widget') : $html;
+return $this->consentGate instanceof ScriptGateInterface ? $this->consentGate->gate($html, 'my_widget') : $html;
 ```
 
 The gate turns `<script>` into `type="text/plain"`, removes the `src` of `<iframe>` and `<img>`, and drops `<noscript>` blocks. The page stays the same for every visitor, so it can be served from a shared cache; the browser runs the markup once the category is accepted. `GoogleTagManager` is the first module built this way.
 
-In the browser, `window.theliaConsent.has('analytics')` tells whether a category is accepted, and a `thelia:consent` event is dispatched on `document` with `detail.accepted` each time the choice is applied. Server side, `consent_manager.consent_state` reads the consent cookie, for responses that are never shared between visitors.
+In the browser, `window.theliaConsent.has('analytics')` tells whether a category is accepted, and a `thelia:consent` event is dispatched on `document` with `detail.accepted` each time the choice is applied. Server side, `consent_manager.consent_state` (`ConsentStateInterface`) reads the consent cookie, for responses that are never shared between visitors.
 
 ## Headless front
 
 | Endpoint | |
 |---|---|
 | `GET /api/front/consent-configuration?locale=fr_FR` | Current policy version, categories and services |
-| `POST /api/front/consents` | Records a choice: `{"visitorId": null, "policy": 3, "accepted": ["analytics"], "refused": ["marketing"]}`. A category not listed is refused, refusing a strictly necessary one is a 422. Answers the proof and the value of the `thelia_consent` cookie |
-| `GET /api/front/consents/{visitorId}` | The latest choice of a visitor; `current` is false once the policy changed |
+| `POST /api/front/consent` | Records the choice of the current visitor: `{"policy": 3, "accepted": ["analytics"], "refused": ["marketing"]}`. A category not listed is refused, refusing a strictly necessary one is a 422. Answers the proof and the value of the `thelia_consent` cookie to store |
+| `GET /api/front/consent` | The latest choice of the current visitor, 404 without one; `current` is false once the policy changed |
+
+The current visitor is the one of the `thelia_consent` cookie, or of the `X-Thelia-Consent` header carrying the same value for a front on another domain. Nobody reads or extends the choice of somebody else: a visitor id in the request body is ignored.
 
 Recording is limited to 30 choices an hour per address.
 

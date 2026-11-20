@@ -26,6 +26,8 @@ use Thelia\Core\Event\TheliaEvents;
  */
 final readonly class ConsentRecordPurgeListener
 {
+    public const BATCH_SIZE = 1000;
+
     public function __construct(
         private ConsentSettings $settings,
     ) {
@@ -41,8 +43,10 @@ final readonly class ConsentRecordPurgeListener
             return;
         }
 
-        $query = ConsentRecordQuery::create()->olderThan(new \DateTimeImmutable(\sprintf('-%d days', $days)));
-        $count = $event->isDryRun() ? $query->count() : $query->delete();
+        $limit = new \DateTimeImmutable(\sprintf('-%d days', $days));
+        $count = $event->isDryRun()
+            ? ConsentRecordQuery::create()->olderThan($limit)->count()
+            : $this->deleteInBatches($limit);
 
         $event->addResult(\sprintf(
             '<comment>Consent records (>%d days):</comment> <info>%d %s</info>',
@@ -50,5 +54,22 @@ final readonly class ConsentRecordPurgeListener
             $count,
             $event->isDryRun() ? 'to delete' : 'deleted',
         ));
+    }
+
+    /**
+     * A shop that never purged may hold millions of proofs: deleting them in one
+     * statement would lock the table for as long, under the visitors' new choices.
+     */
+    private function deleteInBatches(\DateTimeInterface $limit): int
+    {
+        $deleted = 0;
+        do {
+            $ids = ConsentRecordQuery::create()->olderThan($limit)->select(['Id'])->limit(self::BATCH_SIZE)->find()->getData();
+            if ([] !== $ids) {
+                $deleted += ConsentRecordQuery::create()->filterById($ids)->delete();
+            }
+        } while (\count($ids) === self::BATCH_SIZE);
+
+        return $deleted;
     }
 }

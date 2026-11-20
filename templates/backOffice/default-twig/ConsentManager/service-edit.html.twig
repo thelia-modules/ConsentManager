@@ -46,6 +46,10 @@
 					<label class="form-label" for="description-{{ locale }}">{{ 'Purpose'|trans({}, domain) }}</label>
 					<textarea class="form-control" id="description-{{ locale }}" name="texts[{{ locale }}][description]" rows="2">{{ text.description }}</textarea>
 				</div>
+				<div class="mt-2">
+					<label class="form-label" for="duration-{{ locale }}">{{ 'Cookie lifetime'|trans({}, domain) }}</label>
+					<input class="form-control" id="duration-{{ locale }}" name="texts[{{ locale }}][duration]" value="{{ text.duration }}" maxlength="255" placeholder="{{ '13 months'|trans({}, domain) }}">
+				</div>
 			</fieldset>
 		{% endfor %}
 

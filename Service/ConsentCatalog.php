@@ -41,6 +41,7 @@ class ConsentCatalog
         private readonly EventDispatcherInterface $dispatcher,
         #[Autowire(service: 'translator')]
         private readonly TranslatorInterface $translator,
+        private readonly ConsentCache $cache,
     ) {
     }
 
@@ -143,6 +144,7 @@ class ConsentCatalog
                 $this->translate($declaration->description, $declaration->translationDomain, $locale),
                 false,
                 true,
+                $this->translate($declaration->duration, $declaration->translationDomain, $locale),
             );
         }
 
@@ -152,7 +154,7 @@ class ConsentCatalog
                 continue;
             }
 
-            [$title, $description] = self::texts($row, $locale);
+            [$title, $description, $duration] = self::texts($row, $locale);
             $views[] = new ServiceView(
                 $code,
                 '' !== $title ? $title : $code,
@@ -163,6 +165,7 @@ class ConsentCatalog
                 $description,
                 true,
                 false,
+                $duration,
             );
         }
 
@@ -171,17 +174,41 @@ class ConsentCatalog
         return $views;
     }
 
+    /** Read on every page that gates markup: from the cache. */
     public function categoryOfService(string $serviceCode): ?string
     {
-        $row = ConsentServiceQuery::create()->findOneByCode($serviceCode);
-        if (null !== $row) {
-            $category = ConsentCategoryQuery::create()->findPk($row->getCategoryId());
-            if (null !== $category) {
-                return $category->getCode();
+        return $this->cache->get('service_categories', $this->serviceCategoryMap(...))[$serviceCode] ?? null;
+    }
+
+    /**
+     * @return list<string> read on every request that asks for a consent: from the cache
+     */
+    public function cachedRequiredCategoryCodes(): array
+    {
+        return $this->cache->get('required_categories', $this->requiredCategoryCodes(...));
+    }
+
+    /**
+     * @return array<string, string> service code => category code, the merchant's choice first
+     */
+    public function serviceCategoryMap(): array
+    {
+        $map = [];
+        foreach ($this->declarations() as $code => $declaration) {
+            $map[$code] = $declaration->categoryCode;
+        }
+
+        $categoryCodes = [];
+        foreach ($this->categoryModels() as $category) {
+            $categoryCodes[(int) $category->getId()] = $category->getCode();
+        }
+        foreach (ConsentServiceQuery::create()->find() as $row) {
+            if (isset($categoryCodes[(int) $row->getCategoryId()]) && (1 === (int) $row->getCustom() || isset($map[$row->getCode()]))) {
+                $map[$row->getCode()] = $categoryCodes[(int) $row->getCategoryId()];
             }
         }
 
-        return ($this->declarations()[$serviceCode] ?? null)?->categoryCode;
+        return $map;
     }
 
     /**
@@ -196,20 +223,20 @@ class ConsentCatalog
      * Title and description in the asked language, else in the shop's default one: a
      * language activated after the categories were written still shows them.
      *
-     * @return array{string, string}
+     * @return array{string, string, string} title, description, and duration for a service
      */
     private static function texts(ConsentCategory|ConsentService $model, string $locale): array
     {
         $model->setLocale($locale);
-        $title = (string) $model->getTitle();
-        $description = (string) $model->getDescription();
-        if ('' === $title) {
+        if ('' === (string) $model->getTitle()) {
             $model->setLocale(Lang::getDefaultLanguage()->getLocale());
-            $title = (string) $model->getTitle();
-            $description = (string) $model->getDescription();
         }
 
-        return [$title, $description];
+        return [
+            (string) $model->getTitle(),
+            (string) $model->getDescription(),
+            $model instanceof ConsentService ? (string) $model->getDuration() : '',
+        ];
     }
 
     private function translate(string $text, ?string $domain, string $locale): string

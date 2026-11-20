@@ -25,26 +25,27 @@ use Symfony\Component\Serializer\Attribute\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
- * A visitor's choice, as a headless front records and reads it. The same rules apply
- * as on the theme's banner: unknown categories and refused necessary ones are rejected.
+ * The choice of the current visitor, as a headless front records and reads it. The
+ * visitor is the one named by the consent cookie, or by the X-Thelia-Consent header
+ * carrying the same value: nobody reads or extends the choice of somebody else.
  */
 #[ApiResource(
     operations: [
         new Post(
-            uriTemplate: '/front/consents',
+            uriTemplate: '/front/consent',
             openapi: new OpenApiOperation(
-                summary: 'Record a consent choice',
-                description: 'Writes a proof of the choice and returns the value of the consent cookie to store. Send back the visitorId of an earlier answer when the visitor changes their mind. A category not listed is refused.',
+                summary: 'Record the consent choice of the current visitor',
+                description: 'Writes a proof of the choice and returns the value of the consent cookie to store. A visitor who already chose is known by the thelia_consent cookie or the X-Thelia-Consent header and keeps their identifier; anyone else gets a new one. A category not listed is refused; refusing a strictly necessary one, or naming an unknown one, is a 422.',
             ),
             normalizationContext: ['groups' => [self::GROUP_READ]],
             denormalizationContext: ['groups' => [self::GROUP_WRITE]],
             processor: ConsentChoiceProcessor::class,
         ),
         new Get(
-            uriTemplate: '/front/consents/{visitorId}',
+            uriTemplate: '/front/consent',
             openapi: new OpenApiOperation(
-                summary: 'Read the latest consent choice of a visitor',
-                description: 'current is false when the policy changed since the choice: the visitor has to be asked again.',
+                summary: 'Read the latest consent choice of the current visitor',
+                description: 'The visitor is the one of the thelia_consent cookie or the X-Thelia-Consent header; 404 without one. current is false once the policy changed: the visitor has to be asked again.',
             ),
             normalizationContext: ['groups' => [self::GROUP_READ]],
             provider: ConsentChoiceProvider::class,
@@ -58,8 +59,7 @@ final class ConsentChoice
     public const GROUP_WRITE = 'consent_choice:write';
 
     #[ApiProperty(identifier: true)]
-    #[Groups([self::GROUP_READ, self::GROUP_WRITE])]
-    #[Assert\Uuid(versions: [Assert\Uuid::V4_RANDOM])]
+    #[Groups([self::GROUP_READ])]
     public ?string $visitorId = null;
 
     #[Groups([self::GROUP_READ, self::GROUP_WRITE])]

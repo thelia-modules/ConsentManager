@@ -31,6 +31,7 @@
         <column name="privacy_url" size="255" type="VARCHAR" />
         <column name="title" size="255" type="VARCHAR" />
         <column name="description" type="CLOB" />
+        <column name="duration" size="255" type="VARCHAR" />
         <unique name="consent_service_code_unique">
             <unique-column name="code" />
         </unique>
@@ -39,7 +40,7 @@
         </foreign-key>
         <behavior name="timestampable" />
         <behavior name="i18n">
-            <parameter name="i18n_columns" value="title, description" />
+            <parameter name="i18n_columns" value="title, description, duration" />
         </behavior>
     </table>
 

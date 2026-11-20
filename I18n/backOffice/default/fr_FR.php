@@ -13,6 +13,7 @@ declare(strict_types=1);
  */
 
 return [
+    '13 months' => '13 mois',
     '%count% proofs recorded.' => '%count% preuves enregistrées.',
     '0 keeps them all. Older proofs are deleted by the maintenance:purge command.' => '0 les conserve toutes. Les preuves plus anciennes sont supprimées par la commande maintenance:purge.',
     'A choice is kept between 1 and 395 days (13 months).' => 'Un choix est conservé entre 1 et 395 jours (13 mois).',
@@ -35,6 +36,7 @@ return [
     'Category saved.' => 'Catégorie enregistrée.',
     'Code' => 'Code',
     'Consent manager' => 'Gestion du consentement',
+    'Cookie lifetime' => 'Durée de vie des cookies',
     'Cookies' => 'Cookies',
     'Current policy version: %version%, published on %date%. Any change to the banner, the categories or the services publishes a new version, and visitors are asked again.' => 'Version de la politique en vigueur : %version%, publiée le %date%. Toute modification du bandeau, des catégories ou des services publie une nouvelle version, et la question est reposée aux visiteurs.',
     'Date' => 'Date',
@@ -48,6 +50,7 @@ return [
     'Edit a category' => 'Modifier une catégorie',
     'Edit a service' => 'Modifier un service',
     'Find' => 'Rechercher',
+    'Introduction of the cookie policy page' => 'Introduction de la page de politique de cookies',
     'Leave empty to use the module wording. Have the text reviewed: it is a legal notice.' => 'Laisser vide pour utiliser le texte du module. Faites relire le texte : c\'est une mention légale.',
     'Lowercase letters, digits and underscores. A module names the category of its services by this code.' => 'Minuscules, chiffres et tirets bas. Un module désigne la catégorie de ses services par ce code.',
     'Modules declare the services they load. Move one to another category if it does not fit, or add a service the shop loads without a module (a video, a chat widget).' => 'Les modules déclarent les services qu\'ils chargent. Déplacez-en un dans une autre catégorie s\'il n\'y a pas sa place, ou ajoutez un service que la boutique charge sans module (une vidéo, un outil de discussion).',

@@ -35,7 +35,14 @@ class ConsentPolicyRegistry
     public function __construct(
         private readonly ConsentCatalog $catalog,
         private readonly ConsentSettings $settings,
+        private readonly ConsentCache $cache,
     ) {
+    }
+
+    /** The version every page shows: from the cache, computed only after a change. */
+    public function currentId(): int
+    {
+        return $this->cache->get('policy_id', fn (): int => (int) $this->current()->getId());
     }
 
     public function current(): ConsentPolicy
@@ -64,10 +71,11 @@ class ConsentPolicyRegistry
         return $this->current = $policy;
     }
 
-    /** Forgets the version computed earlier in this request, after the back-office changed something. */
+    /** After the back-office changed something: the next page computes the new version. */
     public function reset(): void
     {
         $this->current = null;
+        $this->cache->invalidate();
     }
 
     public function exists(int $policyId): bool
@@ -81,14 +89,14 @@ class ConsentPolicyRegistry
     private function snapshot(): array
     {
         $locales = [];
-        foreach (LangQuery::create()->filterByActive(1)->find() as $lang) {
+        foreach (LangQuery::create()->filterByActive(true)->find() as $lang) {
             $locales[] = $lang->getLocale();
         }
         sort($locales);
 
         $banner = [];
         foreach ($locales as $locale) {
-            $banner[$locale] = [$this->settings->bannerTitle($locale), $this->settings->bannerText($locale)];
+            $banner[$locale] = [$this->settings->bannerTitle($locale), $this->settings->bannerText($locale), $this->settings->policyIntro($locale)];
         }
 
         $categories = [];
@@ -109,13 +117,14 @@ class ConsentPolicyRegistry
                 'cookies' => $declaration->cookies,
                 'privacy' => $declaration->privacyUrl,
                 'description' => $declaration->description,
+                'duration' => $declaration->duration,
             ];
         }
         foreach (ConsentServiceQuery::create()->find() as $row) {
             $texts = [];
             foreach ($locales as $locale) {
                 $row->setLocale($locale);
-                $texts[$locale] = [(string) $row->getTitle(), (string) $row->getDescription()];
+                $texts[$locale] = [(string) $row->getTitle(), (string) $row->getDescription(), (string) $row->getDuration()];
             }
             $services[$row->getCode()] = array_merge($services[$row->getCode()] ?? [], [
                 'category' => $this->catalog->categoryOfService($row->getCode()),

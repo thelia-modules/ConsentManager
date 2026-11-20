@@ -18,7 +18,8 @@ namespace ConsentManager\Event;
  * What a module tells the visitor about one of its services.
  *
  * The category is only a suggestion: the merchant can move the service to another
- * category from the back-office. Title and description are translated in the given
+ * category from the back-office. Title, description and duration (how long its cookies
+ * last, "13 months") are translated in the given
  * domain when one is set, so a module ships them in English with its own catalog.
  */
 final readonly class ConsentServiceDeclaration
@@ -35,6 +36,7 @@ final readonly class ConsentServiceDeclaration
         public ?string $privacyUrl = null,
         public string $description = '',
         public ?string $translationDomain = null,
+        public string $duration = '',
     ) {
         if (1 !== preg_match('/^[a-z0-9_]{1,64}$/', $code)) {
             throw new \InvalidArgumentException(\sprintf('"%s" is not a valid consent service code: lowercase letters, digits and underscores only.', $code));

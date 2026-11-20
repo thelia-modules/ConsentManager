@@ -30,6 +30,7 @@ final readonly class ConsentBannerData
         private ConsentSettings $settings,
         #[Autowire(service: 'translator')]
         private TranslatorInterface $translator,
+        private ConsentCache $cache,
     ) {
     }
 
@@ -37,6 +38,14 @@ final readonly class ConsentBannerData
      * @return array{policy: int, cookieName: string, lifetimeDays: int, title: string, text: string, categories: list<array{code: string, title: string, description: string, required: bool, services: list<array{code: string, title: string, provider: string, cookies: list<string>, privacyUrl: ?string, description: string}>}>}
      */
     public function build(string $locale): array
+    {
+        return $this->cache->get('banner.'.$locale, fn (): array => $this->compute($locale));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function compute(string $locale): array
     {
         $categories = [];
         foreach ($this->catalog->categories($locale) as $category) {
@@ -52,16 +61,18 @@ final readonly class ConsentBannerData
                     'cookies' => $service->cookies,
                     'privacyUrl' => $service->privacyUrl,
                     'description' => $service->description,
+                    'duration' => $service->duration,
                 ], $category->services),
             ];
         }
 
         return [
-            'policy' => (int) $this->policies->current()->getId(),
+            'policy' => $this->policies->currentId(),
             'cookieName' => ConsentCookie::NAME,
             'lifetimeDays' => $this->settings->lifetimeDays(),
             'title' => $this->settings->bannerTitle($locale) ?: $this->translator->trans('We use cookies', [], ConsentManager::FO_DOMAIN, $locale),
             'text' => $this->settings->bannerText($locale) ?: $this->translator->trans('Some cookies are needed for the shop to work. With your consent, we also use others to measure the audience and show you relevant advertising. You can change your mind at any time from the "Cookie settings" link at the bottom of every page.', [], ConsentManager::FO_DOMAIN, $locale),
+            'policyIntro' => $this->settings->policyIntro($locale),
             'categories' => $categories,
         ];
     }

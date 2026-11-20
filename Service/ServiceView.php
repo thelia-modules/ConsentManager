@@ -29,6 +29,7 @@ final readonly class ServiceView
         public string $description,
         public bool $custom,
         public bool $declared,
+        public string $duration = '',
     ) {
     }
 }

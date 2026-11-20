@@ -50,7 +50,7 @@ final readonly class ConsentConfigurationProvider implements ProviderInterface
     private function locale(): string
     {
         $asked = (string) $this->requestStack->getCurrentRequest()?->query->get('locale', '');
-        if ('' !== $asked && null !== LangQuery::create()->filterByActive(1)->findOneByLocale($asked)) {
+        if ('' !== $asked && null !== LangQuery::create()->filterByActive(true)->findOneByLocale($asked)) {
             return $asked;
         }
 

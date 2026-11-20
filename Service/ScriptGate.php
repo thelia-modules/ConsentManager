@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace ConsentManager\Service;
 
+use ConsentManager\Contract\ScriptGateInterface;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -29,7 +30,7 @@ use Psr\Log\LoggerInterface;
  * Other modules reach it by its service id ({@see \ConsentManager\ConsentManager::SCRIPT_GATE_SERVICE}),
  * which only exists while this module is active.
  */
-class ScriptGate
+class ScriptGate implements ScriptGateInterface
 {
     public function __construct(
         private readonly ConsentCatalog $catalog,

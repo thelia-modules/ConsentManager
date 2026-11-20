@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace ConsentManager\Tests;
 
+use ConsentManager\Service\ConsentCache;
 use Symfony\Component\Process\Process;
 use Thelia\Model\ModuleQuery;
 
@@ -24,6 +25,16 @@ use Thelia\Model\ModuleQuery;
  */
 trait ActivatesConsentManager
 {
+    /**
+     * The application cache outlives the rolled back transaction of a test: what a test
+     * computed (a policy version whose row is gone) must not be served to the next one.
+     * Called by setUp(), once the kernel of the test is booted.
+     */
+    private function forgetCachedConsentData(): void
+    {
+        static::getContainer()->get(ConsentCache::class)->invalidate();
+    }
+
     public static function setUpBeforeClass(): void
     {
         self::bootKernel();

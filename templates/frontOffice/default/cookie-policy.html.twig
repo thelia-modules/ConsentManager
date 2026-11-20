@@ -7,7 +7,7 @@
 {% block body %}
     <div class="container-l pt-10 pb-15 flex flex-col gap-6" data-testid="consent-manager-policy">
         <h1 class="h3">{{ 'Cookie policy'|trans({}, domain) }}</h1>
-        <p class="paragraph-3">{{ 'A cookie is a small file a site stores in your browser. Below are the categories of cookies this shop uses, what each is for, and the services behind them. Only the strictly necessary ones are set without your consent.'|trans({}, domain) }}</p>
+        <p class="paragraph-3" style="white-space: pre-line">{{ consent.policyIntro ?: 'A cookie is a small file a site stores in your browser. Below are the categories of cookies this shop uses, what each is for, and the services behind them. Only the strictly necessary ones are set without your consent.'|trans({}, domain) }}</p>
         <p>
             <twig:Molecules:Button:Base color="secondary" text="{{ 'Change my choices'|trans({}, domain) }}" data-consent-open />
         </p>
@@ -26,7 +26,8 @@
                                     <th scope="col" class="text-start py-2 pe-4">{{ 'Service'|trans({}, domain) }}</th>
                                     <th scope="col" class="text-start py-2 pe-4">{{ 'Provider'|trans({}, domain) }}</th>
                                     <th scope="col" class="text-start py-2 pe-4">{{ 'Purpose'|trans({}, domain) }}</th>
-                                    <th scope="col" class="text-start py-2">{{ 'Cookies'|trans({}, domain) }}</th>
+                                    <th scope="col" class="text-start py-2 pe-4">{{ 'Cookies'|trans({}, domain) }}</th>
+                                    <th scope="col" class="text-start py-2">{{ 'Lifetime'|trans({}, domain) }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -41,7 +42,8 @@
                                         </td>
                                         <td class="py-2 pe-4">{{ service.provider }}</td>
                                         <td class="py-2 pe-4">{{ service.description }}</td>
-                                        <td class="py-2"><span dir="ltr">{{ service.cookies|join(', ') }}</span></td>
+                                        <td class="py-2 pe-4"><span dir="ltr">{{ service.cookies|join(', ') }}</span></td>
+                                        <td class="py-2">{{ service.duration }}</td>
                                     </tr>
                                 {% endfor %}
                             </tbody>

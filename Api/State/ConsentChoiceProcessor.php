@@ -20,6 +20,7 @@ use ConsentManager\Api\Resource\ConsentChoice;
 use ConsentManager\ConsentManager;
 use ConsentManager\Exception\InvalidConsentChoiceException;
 use ConsentManager\Service\ConsentChoiceMapper;
+use ConsentManager\Service\ConsentCookie;
 use ConsentManager\Service\ConsentRecorder;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -43,16 +44,16 @@ final readonly class ConsentChoiceProcessor implements ProcessorInterface
 
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): ConsentChoice
     {
-        \assert($data instanceof ConsentChoice);
-
-        $client = $this->requestStack->getCurrentRequest()?->getClientIp() ?? 'unknown';
+        $request = $this->requestStack->getCurrentRequest();
+        $client = $request?->getClientIp() ?? 'unknown';
         $limit = $this->limiter->create($client)->consume();
         if (!$limit->isAccepted()) {
             throw new TooManyRequestsHttpException($limit->getRetryAfter()->getTimestamp() - time(), 'Too many consent choices from this address.');
         }
 
         try {
-            $record = $this->recorder->record($data->visitorId, $data->policy, array_values($data->accepted), array_values($data->refused));
+            // The visitor is the one the request already carries, never one named in the body.
+            $record = $this->recorder->record(ConsentCookie::fromRequest($request)?->visitorId, $data->policy, $data->accepted, $data->refused);
         } catch (InvalidConsentChoiceException $exception) {
             throw new UnprocessableEntityHttpException($exception->getMessage(), $exception);
         }

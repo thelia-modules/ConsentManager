@@ -14,6 +14,8 @@ declare(strict_types=1);
 
 namespace ConsentManager;
 
+use ConsentManager\Contract\ConsentStateInterface;
+use ConsentManager\Contract\ScriptGateInterface;
 use ConsentManager\Service\ConsentState;
 use ConsentManager\Service\DefaultCategories;
 use ConsentManager\Service\ScriptGate;
@@ -22,6 +24,8 @@ use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigura
 use Symfony\Component\DependencyInjection\Loader\Configurator\ServicesConfigurator;
 use Symfony\Component\Finder\Finder;
 use Thelia\Core\Install\Database;
+use Thelia\Model\Resource;
+use Thelia\Model\ResourceQuery;
 use Thelia\Module\BaseModule;
 
 class ConsentManager extends BaseModule
@@ -36,6 +40,9 @@ class ConsentManager extends BaseModule
 
     public const RATE_LIMITER = 'consent_manager_record';
 
+    /** Reading the proofs is a right of its own: granting the module settings does not grant them. */
+    public const PROOFS_RESOURCE = 'admin.consentmanager.proofs';
+
     public static function configureServices(ServicesConfigurator $services): void
     {
         $services->load(self::getModuleCode().'\\', __DIR__)
@@ -49,8 +56,11 @@ class ConsentManager extends BaseModule
             ->autowire()
             ->autoconfigure();
 
-        $services->alias(self::SCRIPT_GATE_SERVICE, ScriptGate::class)->public();
-        $services->alias(self::CONSENT_STATE_SERVICE, ConsentState::class)->public();
+        // The published contract: other modules reach these ids, a project may point them to its own implementation.
+        $services->alias(ScriptGateInterface::class, ScriptGate::class);
+        $services->alias(ConsentStateInterface::class, ConsentState::class);
+        $services->alias(self::SCRIPT_GATE_SERVICE, ScriptGateInterface::class)->public();
+        $services->alias(self::CONSENT_STATE_SERVICE, ConsentStateInterface::class)->public();
     }
 
     /**
@@ -72,6 +82,14 @@ class ConsentManager extends BaseModule
 
     public function postActivation(?ConnectionInterface $con = null): void
     {
+        if (null === ResourceQuery::create()->findOneByCode(self::PROOFS_RESOURCE)) {
+            (new Resource())
+                ->setCode(self::PROOFS_RESOURCE)
+                ->setLocale('en_US')->setTitle('Consent manager: proofs of consent')
+                ->setLocale('fr_FR')->setTitle('Gestion du consentement : preuves de consentement')
+                ->save($con);
+        }
+
         if ('1' !== self::getConfigValue('is_initialized', '0')) {
             (new Database($con))->insertSql(null, [__DIR__.'/Config/TheliaMain.sql']);
             DefaultCategories::create();

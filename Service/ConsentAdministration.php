@@ -118,7 +118,7 @@ class ConsentAdministration
     }
 
     /**
-     * @param array<string, array{title: string, description: string}> $texts by locale
+     * @param array<string, array{title: string, description: string, duration: string}> $texts by locale
      */
     public function saveCustomService(?string $existingCode, string $code, string $categoryCode, string $provider, string $cookies, string $privacyUrl, array $texts): ConsentService
     {
@@ -143,7 +143,7 @@ class ConsentAdministration
             ->setCookies(implode(', ', ConsentCatalog::splitCookies($cookies)))
             ->setPrivacyUrl(trim($privacyUrl));
         foreach ($texts as $locale => $text) {
-            $service->setLocale($locale)->setTitle(trim($text['title']))->setDescription(trim($text['description']));
+            $service->setLocale($locale)->setTitle(trim($text['title']))->setDescription(trim($text['description']))->setDuration(trim($text['duration']));
         }
         $service->save();
         $this->policies->reset();

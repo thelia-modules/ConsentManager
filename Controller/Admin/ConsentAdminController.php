@@ -29,6 +29,7 @@ use Propel\Runtime\ActiveQuery\Criteria;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\Session\FlashBagAwareSessionInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Thelia\Controller\Admin\BaseAdminController;
@@ -63,7 +64,7 @@ class ConsentAdminController extends BaseAdminController
 
         $banners = [];
         foreach (self::locales() as $locale => $title) {
-            $banners[$locale] = ['language' => $title, 'title' => $settings->bannerTitle($locale), 'text' => $settings->bannerText($locale)];
+            $banners[$locale] = ['language' => $title, 'title' => $settings->bannerTitle($locale), 'text' => $settings->bannerText($locale), 'intro' => $settings->policyIntro($locale)];
         }
 
         $current = $policies->current();
@@ -78,9 +79,9 @@ class ConsentAdminController extends BaseAdminController
     }
 
     #[Route('/settings', name: '.settings.save', methods: ['POST'])]
-    public function saveSettings(Request $request, TokenProvider $tokens, ConsentSettings $settings): Response
+    public function saveSettings(Request $request, TokenProvider $tokens, ConsentSettings $settings, ConsentPolicyRegistry $policies): Response
     {
-        return $this->mutate($request, $tokens, 'consentmanager.admin.settings', [], static function () use ($request, $settings): string {
+        return $this->mutate($request, $tokens, 'consentmanager.admin.settings', [], static function () use ($request, $settings, $policies): string {
             $lifetime = (int) $request->request->getString('lifetime_days');
             $retention = (int) $request->request->getString('retention_days');
             if ($lifetime < 1 || $lifetime > 395) {
@@ -93,8 +94,10 @@ class ConsentAdminController extends BaseAdminController
             $banners = $request->request->all('banner');
             foreach (array_keys(self::locales()) as $locale) {
                 $settings->saveBanner($locale, trim((string) ($banners[$locale]['title'] ?? '')), trim((string) ($banners[$locale]['text'] ?? '')));
+                $settings->savePolicyIntro($locale, trim((string) ($banners[$locale]['intro'] ?? '')));
             }
             $settings->saveDurations($lifetime, $retention);
+            $policies->reset();
 
             return 'Settings saved.';
         });
@@ -215,7 +218,7 @@ class ConsentAdminController extends BaseAdminController
         $texts = [];
         foreach (self::locales() as $locale => $language) {
             $service?->setLocale($locale);
-            $texts[$locale] = ['language' => $language, 'title' => (string) $service?->getTitle(), 'description' => (string) $service?->getDescription()];
+            $texts[$locale] = ['language' => $language, 'title' => (string) $service?->getTitle(), 'description' => (string) $service?->getDescription(), 'duration' => (string) $service?->getDuration()];
         }
 
         return $this->page($twig, 'service-edit.html.twig', [
@@ -263,7 +266,7 @@ class ConsentAdminController extends BaseAdminController
     #[Route('/records', name: '.records', methods: ['GET'])]
     public function records(Environment $twig, Request $request): Response
     {
-        if (null !== $response = $this->checkAuth([AdminResources::MODULE], [ConsentManager::getModuleCode()], AccessManager::VIEW)) {
+        if (null !== $response = $this->checkAuth([ConsentManager::PROOFS_RESOURCE], [], AccessManager::VIEW)) {
             return $response;
         }
 
@@ -323,7 +326,9 @@ class ConsentAdminController extends BaseAdminController
             return $response;
         }
 
-        $flashBag = $request->getSession()->getFlashBag();
+        $session = $request->getSession();
+        \assert($session instanceof FlashBagAwareSessionInterface);
+        $flashBag = $session->getFlashBag();
 
         try {
             $tokens->checkRequestToken($request);
@@ -348,7 +353,7 @@ class ConsentAdminController extends BaseAdminController
     private static function locales(): array
     {
         $locales = [];
-        foreach (LangQuery::create()->filterByActive(1)->orderByPosition()->find() as $lang) {
+        foreach (LangQuery::create()->filterByActive(true)->orderByPosition()->find() as $lang) {
             $locales[$lang->getLocale()] = (string) $lang->getTitle();
         }
 
@@ -356,7 +361,7 @@ class ConsentAdminController extends BaseAdminController
     }
 
     /**
-     * @return array<string, array{title: string, description: string}>
+     * @return array<string, array{title: string, description: string, duration: string}>
      */
     private static function texts(Request $request): array
     {
@@ -366,6 +371,7 @@ class ConsentAdminController extends BaseAdminController
             $texts[$locale] = [
                 'title' => (string) ($posted[$locale]['title'] ?? ''),
                 'description' => (string) ($posted[$locale]['description'] ?? ''),
+                'duration' => (string) ($posted[$locale]['duration'] ?? ''),
             ];
         }
 

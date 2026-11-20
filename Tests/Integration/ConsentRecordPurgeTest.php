@@ -34,6 +34,7 @@ final class ConsentRecordPurgeTest extends IntegrationTestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->forgetCachedConsentData();
         $this->previousRetention = ConsentManager::getConfigValue(ConsentSettings::RETENTION_DAYS);
     }
 

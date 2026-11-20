@@ -53,6 +53,7 @@ final readonly class ShopCookiesDeclaration
             ],
             description: 'Keeps your session, your cart, your login when you ask to be remembered, and this consent choice.',
             translationDomain: ConsentManager::FO_DOMAIN,
+            duration: 'From the end of the visit to one year',
         ));
     }
 }

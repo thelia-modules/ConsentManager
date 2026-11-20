@@ -115,6 +115,7 @@ CREATE TABLE IF NOT EXISTS `consent_service_i18n`
     `locale` VARCHAR(5) DEFAULT 'en_US' NOT NULL,
     `title` VARCHAR(255),
     `description` LONGTEXT,
+    `duration` VARCHAR(255),
     PRIMARY KEY (`id`,`locale`),
     CONSTRAINT `consent_service_i18n_fk_6931ec`
         FOREIGN KEY (`id`)

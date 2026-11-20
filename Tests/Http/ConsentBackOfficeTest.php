@@ -14,10 +14,13 @@ declare(strict_types=1);
 
 namespace ConsentManager\Tests\Http;
 
+use ConsentManager\ConsentManager;
 use ConsentManager\Model\ConsentCategoryQuery;
 use ConsentManager\Service\ConsentRecorder;
 use ConsentManager\Tests\ActivatesConsentManager;
-use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Thelia\Core\Security\AccessManager;
+use Thelia\Core\Security\Resource\AdminResources;
 use Thelia\Model\Admin;
 use Thelia\Test\FixtureFactory;
 use Thelia\Test\WebIntegrationTestCase;
@@ -32,6 +35,7 @@ final class ConsentBackOfficeTest extends WebIntegrationTestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->forgetCachedConsentData();
         $this->injector = new AdminSessionInjector();
         $this->getService(EventDispatcherInterface::class)->addSubscriber($this->injector);
         $this->loginAs((new FixtureFactory($this->getPropelConnection()))->admin());
@@ -94,6 +98,18 @@ final class ConsentBackOfficeTest extends WebIntegrationTestCase
         $this->client->request('POST', '/admin/module/ConsentManager/categories/'.$necessary->getId().'/delete', ['_token' => $token]);
 
         self::assertNotNull(ConsentCategoryQuery::create()->findPk($necessary->getId()));
+    }
+
+    public function testReadingProofsTakesItsOwnRight(): void
+    {
+        $factory = new FixtureFactory($this->getPropelConnection());
+
+        $this->loginAs($factory->restrictedAdmin([AdminResources::MODULE => [AccessManager::VIEW, AccessManager::UPDATE]]));
+        $this->client->request('GET', '/admin/module/ConsentManager/records');
+        self::assertNotSame(200, $this->client->getResponse()->getStatusCode(), 'the right on modules does not open the proofs');
+
+        $this->loginAs($factory->restrictedAdmin([ConsentManager::PROOFS_RESOURCE => [AccessManager::VIEW]]));
+        $this->assertPageRenders('/admin/module/ConsentManager/records');
     }
 
     private function loginAs(Admin $admin): void
