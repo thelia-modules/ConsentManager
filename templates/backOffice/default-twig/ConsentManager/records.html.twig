@@ -1,0 +1,51 @@
+{% extends '@ConsentManagerModule/backOffice/default-twig/ConsentManager/_layout.html.twig' %}
+
+{% set page_title = 'Proofs of consent'|trans({}, 'consentmanager.bo.default') %}
+
+{% block page %}
+	<p class="text-muted">{{ 'A visitor finds their identifier in the cookie settings of the shop (cookie thelia_consent). Proofs are read only.'|trans({}, domain) }}</p>
+
+	<form method="get" action="{{ path('consentmanager.admin.records') }}" class="row g-2 mb-3" role="search">
+		<div class="col-md-6">
+			<label class="visually-hidden" for="visitor-id">{{ 'Visitor identifier'|trans({}, domain) }}</label>
+			<input class="form-control" id="visitor-id" name="visitor" value="{{ visitor }}" placeholder="xxxxxxxx-xxxx-4xxx-xxxx-xxxxxxxxxxxx" data-testid="consentmanager-records-search">
+		</div>
+		<div class="col-auto"><button type="submit" class="btn btn-primary">{{ 'Find'|trans({}, domain) }}</button></div>
+	</form>
+
+	{% if searched and not valid %}
+		<div class="alert alert-warning">{{ 'This is not a visitor identifier issued by the shop.'|trans({}, domain) }}</div>
+	{% elseif searched and records is empty %}
+		<div class="alert alert-info" data-testid="consentmanager-records-empty">{{ 'No proof for this visitor.'|trans({}, domain) }}</div>
+	{% elseif records is not empty %}
+		<div class="table-responsive">
+			<table class="table table-sm" data-testid="consentmanager-records">
+				<thead>
+					<tr>
+						<th scope="col">{{ 'Date'|trans({}, domain) }}</th>
+						<th scope="col">{{ 'Policy version'|trans({}, domain) }}</th>
+						<th scope="col">{{ 'Accepted'|trans({}, domain) }}</th>
+						<th scope="col">{{ 'Refused'|trans({}, domain) }}</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for record in records %}
+						<tr>
+							<td>{{ record.created_at|date('Y-m-d H:i:s') }}</td>
+							<td><a href="{{ path('consentmanager.admin.records', {visitor, policy: record.policy}) }}">{{ record.policy }}</a></td>
+							<td>{{ record.accepted|join(', ') }}</td>
+							<td>{{ record.refused|join(', ') }}</td>
+						</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+	{% endif %}
+
+	{% if policy %}
+		<div class="card" data-testid="consentmanager-policy-snapshot">
+			<div class="card-header"><h2 class="h6 mb-0">{{ 'Policy version %version%, published on %date%'|trans({'%version%': policy.id, '%date%': policy.created_at|date('Y-m-d H:i')}, domain) }}</h2></div>
+			<div class="card-body"><pre class="mb-0 small">{{ policy.snapshot }}</pre></div>
+		</div>
+	{% endif %}
+{% endblock %}

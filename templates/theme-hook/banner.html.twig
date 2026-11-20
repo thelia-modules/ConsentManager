@@ -1,0 +1,94 @@
+{#
+    The same markup for every visitor: hidden until the script below finds no valid
+    choice in the consent cookie. The three answers carry the same weight, and refusing
+    takes as few clicks as accepting.
+#}
+{% set domain = 'consentmanager.fo.default' %}
+<section
+    id="consent-manager"
+    class="ConsentManager"
+    role="region"
+    aria-labelledby="consent-manager-title"
+    data-testid="consent-manager-banner"
+    hidden
+>
+    <div class="ConsentManager-inner container-l">
+        <div class="ConsentManager-text">
+            <h2 id="consent-manager-title" class="paragraph-1">{{ consent.title }}</h2>
+            <p class="paragraph-5">{{ consent.text }}</p>
+            <a href="{{ path('consentmanager.cookie_policy') }}" class="paragraph-5 underline">{{ 'Read our cookie policy'|trans({}, domain) }}</a>
+        </div>
+        <div class="ConsentManager-actions">
+            <twig:Molecules:Button:Base color="secondary" text="{{ 'Refuse all'|trans({}, domain) }}" data-consent-action="refuse-all" data-testid="consent-manager-refuse-all" />
+            <twig:Molecules:Button:Base color="secondary" text="{{ 'Customize'|trans({}, domain) }}" data-consent-action="customize" data-testid="consent-manager-customize" />
+            <twig:Molecules:Button:Base color="secondary" text="{{ 'Accept all'|trans({}, domain) }}" data-consent-action="accept-all" data-testid="consent-manager-accept-all" />
+        </div>
+    </div>
+</section>
+
+<twig:Molecules:Modal:Base id="consent-manager-preferences" labelledby="consent-manager-preferences-title" class="ConsentManager-dialog" data-testid="consent-manager-preferences">
+    <form class="ConsentManager-form" data-consent-form>
+        <h2 id="consent-manager-preferences-title" class="h4">{{ 'Cookie settings'|trans({}, domain) }}</h2>
+        <p class="paragraph-5">{{ 'Choose what you accept, category by category. You can come back to it at any time from the link at the bottom of every page.'|trans({}, domain) }}</p>
+        <ul class="ConsentManager-categories">
+            {% for category in consent.categories %}
+                <li class="ConsentManager-category" data-testid="consent-manager-category-{{ category.code }}">
+                    {% if category.required %}
+                        <twig:Fields:Checkbox:Base
+                            id="consent-manager-category-{{ category.code }}"
+                            label="{{ category.title }}"
+                            input:name="consent_category"
+                            input:value="{{ category.code }}"
+                            input:checked
+                            input:disabled
+                        />
+                        <p class="paragraph-5 text-grey-dark">{{ 'Always active: the shop cannot work without them.'|trans({}, domain) }}</p>
+                    {% else %}
+                        <twig:Fields:Checkbox:Base
+                            id="consent-manager-category-{{ category.code }}"
+                            label="{{ category.title }}"
+                            input:name="consent_category"
+                            input:value="{{ category.code }}"
+                        />
+                    {% endif %}
+                    {% if category.description %}<p class="paragraph-5">{{ category.description }}</p>{% endif %}
+                    {% if category.services is not empty %}
+                        <details class="ConsentManager-services">
+                            <summary class="paragraph-5">{{ 'Services in this category (%count%)'|trans({'%count%': category.services|length}, domain) }}</summary>
+                            <ul>
+                                {% for service in category.services %}
+                                    <li class="paragraph-5">
+                                        <strong>{{ service.title }}</strong>{% if service.provider %} ({{ service.provider }}){% endif %}
+                                        {% if service.description %}<br>{{ service.description }}{% endif %}
+                                        {% if service.cookies is not empty %}<br>{{ 'Cookies: %names%'|trans({'%names%': service.cookies|join(', ')}, domain) }}{% endif %}
+                                        {% if service.duration %}<br>{{ 'Lifetime: %duration%'|trans({'%duration%': service.duration}, domain) }}{% endif %}
+                                        {% if service.privacyUrl %}<br><a href="{{ service.privacyUrl }}" target="_blank" rel="noopener noreferrer" class="underline">{{ 'Privacy policy'|trans({}, domain) }}</a>{% endif %}
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </details>
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+        <p class="paragraph-5 text-grey-dark" data-consent-visitor hidden>{{ 'Identifier of your choice, to quote if you ask the shop about it:'|trans({}, domain) }} <code dir="ltr"></code></p>
+        <div class="ConsentManager-actions">
+            <twig:Molecules:Button:Base color="secondary" text="{{ 'Refuse all'|trans({}, domain) }}" data-consent-action="refuse-all" />
+            <twig:Molecules:Button:Base color="secondary" type="submit" text="{{ 'Save my choices'|trans({}, domain) }}" data-testid="consent-manager-save" />
+            <twig:Molecules:Button:Base color="secondary" text="{{ 'Accept all'|trans({}, domain) }}" data-consent-action="accept-all" />
+        </div>
+    </form>
+</twig:Molecules:Modal:Base>
+
+<script type="application/json" id="consent-manager-config">{{ {
+    policy: consent.policy,
+    cookieName: consent.cookieName,
+    lifetimeDays: consent.lifetimeDays,
+    endpoint: '/api/front/consent',
+    categories: consent.categories|map(category => {
+        code: category.code,
+        required: category.required,
+        cookies: category.services|reduce((names, service) => names|merge(service.cookies), []),
+    }),
+}|json_encode(constant('JSON_HEX_TAG') b-or constant('JSON_HEX_AMP') b-or constant('JSON_UNESCAPED_SLASHES'))|raw }}</script>
+{{ include('@ConsentManagerModule/theme-hook/banner-assets.html.twig') }}

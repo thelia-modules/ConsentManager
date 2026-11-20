@@ -1,0 +1,47 @@
+{% extends '@ConsentManagerModule/backOffice/default-twig/ConsentManager/_layout.html.twig' %}
+
+{% set page_title = 'Categories'|trans({}, 'consentmanager.bo.default') %}
+
+{% block page %}
+	<p class="text-muted">{{ 'Visitors accept or refuse a whole category at once. A strictly necessary category cannot be refused.'|trans({}, domain) }}</p>
+	<p><a class="btn btn-primary btn-sm" href="{{ path('consentmanager.admin.category.new') }}">{{ 'Add a category'|trans({}, domain) }}</a></p>
+
+	<div class="table-responsive">
+		<table class="table table-sm align-middle" data-testid="consentmanager-categories">
+			<thead>
+				<tr>
+					<th scope="col">{{ 'Category'|trans({}, domain) }}</th>
+					<th scope="col">{{ 'Code'|trans({}, domain) }}</th>
+					<th scope="col">{{ 'Strictly necessary'|trans({}, domain) }}</th>
+					<th scope="col">{{ 'Services'|trans({}, domain) }}</th>
+					<th scope="col" class="text-end">{{ 'Actions'|trans({}, domain) }}</th>
+				</tr>
+			</thead>
+			<tbody>
+				{% for category in categories %}
+					{% set id = ids[category.code] %}
+					<tr data-testid="consentmanager-category-{{ category.code }}">
+						<td><a href="{{ path('consentmanager.admin.category.edit', {id}) }}">{{ category.title }}</a></td>
+						<td><code>{{ category.code }}</code></td>
+						<td>{{ category.required ? 'Yes'|trans({}, domain) : 'No'|trans({}, domain) }}</td>
+						<td>{{ category.services|map(service => service.title)|join(', ') }}</td>
+						<td class="text-end text-nowrap">
+							{% for direction, label in {up: 'Move up', down: 'Move down'} %}
+								<form method="post" action="{{ path('consentmanager.admin.category.move', {id, direction}) }}" class="d-inline">
+									<input type="hidden" name="_token" value="{{ assignToken() }}">
+									<button type="submit" class="btn btn-outline-secondary btn-sm" aria-label="{{ label|trans({}, domain) }} {{ category.title }}">{{ direction == 'up' ? '↑' : '↓' }}</button>
+								</form>
+							{% endfor %}
+							{% if not category.required %}
+								<form method="post" action="{{ path('consentmanager.admin.category.delete', {id}) }}" class="d-inline">
+									<input type="hidden" name="_token" value="{{ assignToken() }}">
+									<button type="submit" class="btn btn-outline-danger btn-sm">{{ 'Delete'|trans({}, domain) }}</button>
+								</form>
+							{% endif %}
+						</td>
+					</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+	</div>
+{% endblock %}
