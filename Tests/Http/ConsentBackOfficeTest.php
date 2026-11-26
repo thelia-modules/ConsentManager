@@ -17,6 +17,7 @@ namespace ConsentManager\Tests\Http;
 use ConsentManager\ConsentManager;
 use ConsentManager\Model\ConsentCategoryQuery;
 use ConsentManager\Service\ConsentRecorder;
+use ConsentManager\Service\ConsentSettings;
 use ConsentManager\Tests\ActivatesConsentManager;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Thelia\Core\Security\AccessManager;
@@ -79,6 +80,28 @@ final class ConsentBackOfficeTest extends WebIntegrationTestCase
 
         self::assertTrue($this->client->getResponse()->isRedirect(), $this->client->getResponse()->getStatusCode().' '.substr(strip_tags((string) $this->client->getResponse()->getContent()), 0, 600));
         self::assertNotNull(ConsentCategoryQuery::create()->findOneByCode('social'));
+    }
+
+    public function testAProofIsKeptAtLeastAsLongAsTheChoiceItProves(): void
+    {
+        $settings = $this->getService(ConsentSettings::class);
+        $settings->saveDurations(180, 0);
+
+        // A proof purged before the choice expires would leave the shop acting on a consent it
+        // can no longer prove.
+        $this->assertPageRenders('/admin/module/ConsentManager/settings');
+        $form = $this->client->getCrawler()->filter('[data-testid="consentmanager-settings-form"]')->form();
+        $this->client->submit($form, ['lifetime_days' => '395', 'retention_days' => '30']);
+
+        self::assertSame(180, $settings->lifetimeDays());
+        self::assertSame(0, $settings->retentionDays());
+
+        $this->assertPageRenders('/admin/module/ConsentManager/settings');
+        $form = $this->client->getCrawler()->filter('[data-testid="consentmanager-settings-form"]')->form();
+        $this->client->submit($form, ['lifetime_days' => '395', 'retention_days' => '395']);
+
+        self::assertSame(395, $settings->lifetimeDays());
+        self::assertSame(395, $settings->retentionDays());
     }
 
     public function testAFormWithoutItsTokenChangesNothing(): void
