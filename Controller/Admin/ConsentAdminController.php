@@ -90,6 +90,11 @@ class ConsentAdminController extends BaseAdminController
             if ($retention < 0) {
                 throw new InvalidConsentChoiceException('The retention period cannot be negative.');
             }
+            // A proof purged while the choice it proves is still honoured would leave the shop
+            // acting on a consent it can no longer prove.
+            if (0 !== $retention && $retention < $lifetime) {
+                throw new InvalidConsentChoiceException('A proof is kept at least as long as the choice it proves.');
+            }
 
             $banners = $request->request->all('banner');
             foreach (array_keys(self::locales()) as $locale) {

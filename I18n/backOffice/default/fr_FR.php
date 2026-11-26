@@ -19,6 +19,7 @@ return [
     'A choice is kept between 1 and 395 days (13 months).' => 'Un choix est conservé entre 1 et 395 jours (13 mois).',
     'A code is made of lowercase letters, digits and underscores, 64 at most.' => 'Un code se compose de minuscules, de chiffres et de tirets bas, 64 au plus.',
     'A module places one of its services in this category: move it to another one first.' => 'Un module place l\'un de ses services dans cette catégorie : déplacez-le d\'abord dans une autre.',
+    'A proof is kept at least as long as the choice it proves.' => 'Une preuve est conservée au moins aussi longtemps que le choix qu\'elle prouve.',
     'A service added here is listed to visitors; its script still has to be held back, by a module or by the theme, until its category is accepted.' => 'Un service ajouté ici est présenté aux visiteurs ; son script doit encore être retenu, par un module ou par le thème, jusqu\'à l\'acceptation de sa catégorie.',
     'A visitor finds their identifier in the cookie settings of the shop (cookie thelia_consent). Proofs are read only.' => 'Le visiteur trouve son identifiant dans la fenêtre « Gérer les cookies » de la boutique (cookie thelia_consent). Les preuves sont en lecture seule.',
     'Accepted' => 'Acceptées',
