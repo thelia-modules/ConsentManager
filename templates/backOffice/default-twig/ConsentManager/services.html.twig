@@ -1,0 +1,54 @@
+{% extends '@ConsentManagerModule/backOffice/default-twig/ConsentManager/_layout.html.twig' %}
+
+{% set page_title = 'Services'|trans({}, 'consentmanager.bo.default') %}
+
+{% block page %}
+	<p class="text-muted">{{ 'Modules declare the services they load. Move one to another category if it does not fit, or add a service the shop loads without a module (a video, a chat widget).'|trans({}, domain) }}</p>
+	<p><a class="btn btn-primary btn-sm" href="{{ path('consentmanager.admin.service.new') }}">{{ 'Add a service'|trans({}, domain) }}</a></p>
+
+	<div class="table-responsive">
+		<table class="table table-sm align-middle" data-testid="consentmanager-services">
+			<thead>
+				<tr>
+					<th scope="col">{{ 'Service'|trans({}, domain) }}</th>
+					<th scope="col">{{ 'Provider'|trans({}, domain) }}</th>
+					<th scope="col">{{ 'Cookies'|trans({}, domain) }}</th>
+					<th scope="col">{{ 'Source'|trans({}, domain) }}</th>
+					<th scope="col">{{ 'Category'|trans({}, domain) }}</th>
+					<th scope="col" class="text-end">{{ 'Actions'|trans({}, domain) }}</th>
+				</tr>
+			</thead>
+			<tbody>
+				{% for service in services %}
+					<tr data-testid="consentmanager-service-{{ service.code }}">
+						<td>{{ service.title }}<br><code class="small">{{ service.code }}</code></td>
+						<td>{{ service.provider }}</td>
+						<td><span dir="ltr">{{ service.cookies|join(', ') }}</span></td>
+						<td>{{ service.custom ? 'Added here'|trans({}, domain) : 'Declared by a module'|trans({}, domain) }}</td>
+						<td>
+							<form method="post" action="{{ path('consentmanager.admin.service.assign', {code: service.code}) }}" class="d-flex gap-2">
+								<input type="hidden" name="_token" value="{{ assignToken() }}">
+								<label class="visually-hidden" for="service-category-{{ service.code }}">{{ 'Category'|trans({}, domain) }}</label>
+								<select class="form-select form-select-sm" id="service-category-{{ service.code }}" name="category">
+									{% for category in categories %}
+										<option value="{{ category.code }}" {{ category.code == service.categoryCode ? 'selected' }}>{{ category.title }}</option>
+									{% endfor %}
+								</select>
+								<button type="submit" class="btn btn-outline-primary btn-sm">{{ 'Move'|trans({}, domain) }}</button>
+							</form>
+						</td>
+						<td class="text-end text-nowrap">
+							{% if service.custom %}
+								<a class="btn btn-outline-secondary btn-sm" href="{{ path('consentmanager.admin.service.edit', {code: service.code}) }}">{{ 'Edit'|trans({}, domain) }}</a>
+								<form method="post" action="{{ path('consentmanager.admin.service.delete', {code: service.code}) }}" class="d-inline">
+									<input type="hidden" name="_token" value="{{ assignToken() }}">
+									<button type="submit" class="btn btn-outline-danger btn-sm">{{ 'Delete'|trans({}, domain) }}</button>
+								</form>
+							{% endif %}
+						</td>
+					</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+	</div>
+{% endblock %}

@@ -1,0 +1,218 @@
+<style>
+    .ConsentManager { position: fixed; inset-inline: 0; inset-block-end: 0; z-index: 60; background: var(--color-white); color: var(--color-black); border-block-start: 1px solid var(--color-grey-lighter); box-shadow: 0 -0.25rem 1rem rgb(0 0 0 / 0.08); }
+    .ConsentManager[hidden] { display: none; }
+    .ConsentManager-inner { display: flex; flex-direction: column; gap: 1rem; padding-block: 1.25rem; }
+    .ConsentManager-text { display: flex; flex-direction: column; gap: 0.5rem; max-width: 60rem; }
+    .ConsentManager-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+    .ConsentManager-actions > * { flex: 1 1 12rem; justify-content: center; }
+    .ConsentManager-dialog { max-width: 42rem; }
+    .ConsentManager-form { display: flex; flex-direction: column; gap: 1rem; }
+    .ConsentManager-categories { display: flex; flex-direction: column; gap: 1rem; list-style: none; padding: 0; margin: 0; }
+    .ConsentManager-category { display: flex; flex-direction: column; gap: 0.375rem; padding-block-end: 1rem; border-block-end: 1px solid var(--color-grey-lighter); }
+    .ConsentManager-services ul { display: flex; flex-direction: column; gap: 0.5rem; margin-block-start: 0.5rem; padding-inline-start: 1rem; list-style: disc; }
+    .ConsentManager-footerButton { background: none; border: 0; padding-inline: 0; font: inherit; color: inherit; cursor: pointer; }
+    @media (min-width: 768px) {
+        .ConsentManager-inner { flex-direction: row; align-items: center; justify-content: space-between; }
+        .ConsentManager-actions { flex-wrap: nowrap; flex-shrink: 0; }
+        .ConsentManager-actions > * { flex: 0 0 auto; }
+    }
+</style>
+<script>
+(function () {
+    'use strict';
+
+    var configElement = document.getElementById('consent-manager-config');
+    var banner = document.getElementById('consent-manager');
+    var dialog = document.getElementById('consent-manager-preferences');
+    if (!configElement || !banner || !dialog) {
+        return;
+    }
+
+    var config = JSON.parse(configElement.textContent);
+    var allCodes = config.categories.map(function (category) { return category.code; });
+    var requiredCodes = config.categories.filter(function (category) { return category.required; }).map(function (category) { return category.code; });
+    var granted = requiredCodes.slice();
+
+    function readChoice() {
+        var match = document.cookie.match(new RegExp('(?:^|;\\s*)' + config.cookieName + '=([^;]*)'));
+        if (!match) {
+            return null;
+        }
+        var parts = decodeURIComponent(match[1]).split('|');
+        if (parts.length !== 3 || !/^\d+$/.test(parts[0])) {
+            return null;
+        }
+
+        return { policy: parseInt(parts[0], 10), visitorId: parts[1], accepted: parts[2] === '' ? [] : parts[2].split('.') };
+    }
+
+    function writeChoice(value, maxAge) {
+        document.cookie = config.cookieName + '=' + value + '; Max-Age=' + maxAge + '; Path=/; SameSite=Lax' + (location.protocol === 'https:' ? '; Secure' : '');
+    }
+
+    function activate(element) {
+        if (element.tagName === 'SCRIPT') {
+            var script = document.createElement('script');
+            Array.prototype.forEach.call(element.attributes, function (attribute) {
+                if (attribute.name !== 'type' && attribute.name !== 'data-consent-type') {
+                    script.setAttribute(attribute.name, attribute.value);
+                }
+            });
+            if (element.dataset.consentType) {
+                script.type = element.dataset.consentType;
+            }
+            if (element.src) {
+                // Inserted scripts are async by default: keep the order the page wrote them in.
+                script.async = false;
+            }
+            script.text = element.text;
+            element.replaceWith(script);
+
+            return;
+        }
+        element.setAttribute('src', element.dataset.consentSrc);
+        element.removeAttribute('data-consent-src');
+    }
+
+    function apply(accepted) {
+        granted = accepted.slice();
+        document.querySelectorAll('script[type="text/plain"][data-consent-category], [data-consent-src][data-consent-category]').forEach(function (element) {
+            if (granted.indexOf(element.dataset.consentCategory) !== -1) {
+                activate(element);
+            }
+        });
+        document.dispatchEvent(new CustomEvent('thelia:consent', { detail: { accepted: granted.slice() } }));
+    }
+
+    function cookieMatches(name, pattern) {
+        return pattern.slice(-1) === '*' ? name.indexOf(pattern.slice(0, -1)) === 0 : name === pattern;
+    }
+
+    function deleteCookiesOf(codes) {
+        var patterns = [];
+        config.categories.forEach(function (category) {
+            if (codes.indexOf(category.code) !== -1) {
+                patterns = patterns.concat(category.cookies);
+            }
+        });
+        if (!patterns.length) {
+            return;
+        }
+        var hostParts = location.hostname.split('.');
+        var domains = [''];
+        for (var i = 0; i < hostParts.length - 1; i++) {
+            domains.push('; Domain=.' + hostParts.slice(i).join('.'));
+        }
+        document.cookie.split(';').forEach(function (pair) {
+            var name = pair.split('=')[0].trim();
+            if (patterns.some(function (pattern) { return cookieMatches(name, pattern); })) {
+                domains.forEach(function (domain) {
+                    document.cookie = name + '=; Max-Age=0; Path=/' + domain;
+                });
+            }
+        });
+    }
+
+    function save(accepted) {
+        accepted = allCodes.filter(function (code) { return accepted.indexOf(code) !== -1 || requiredCodes.indexOf(code) !== -1; });
+        var refused = allCodes.filter(function (code) { return accepted.indexOf(code) === -1; });
+        var previous = readChoice();
+        // Running now and refused: the page restarts without it. Accepted under an older policy and refused: only its cookies go.
+        var withdrawn = granted.filter(function (code) { return refused.indexOf(code) !== -1; });
+        var forgotten = granted.concat(previous ? previous.accepted : []).filter(function (code) { return refused.indexOf(code) !== -1; });
+
+        banner.hidden = true;
+        if (dialog.open) {
+            dialog.close();
+        }
+
+        return fetch(config.endpoint, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({ policy: config.policy, accepted: accepted, refused: refused }),
+        }).then(function (response) {
+            if (!response.ok) {
+                throw new Error('Consent not recorded: HTTP ' + response.status);
+            }
+
+            return response.json();
+        }).then(function (choice) {
+            writeChoice(choice.cookie, choice.maxAge);
+            deleteCookiesOf(forgotten);
+            if (withdrawn.length) {
+                // A script already running cannot be stopped: start the page again without it.
+                location.reload();
+
+                return;
+            }
+            apply(choice.accepted);
+        }).catch(function (error) {
+            // Without a proof, nothing beyond the necessary runs; a refusal still holds for this page.
+            deleteCookiesOf(forgotten);
+            console.error(error);
+        });
+    }
+
+    function openPreferences() {
+        var choice = readChoice();
+        var visitor = dialog.querySelector('[data-consent-visitor]');
+        if (visitor && choice) {
+            visitor.querySelector('code').textContent = choice.visitorId;
+            visitor.hidden = false;
+        }
+        dialog.querySelectorAll('input[name="consent_category"]').forEach(function (input) {
+            if (!input.disabled) {
+                input.checked = granted.indexOf(input.value) !== -1;
+            }
+        });
+        dialog.showModal();
+    }
+
+    banner.addEventListener('click', function (event) {
+        var action = event.target.closest('[data-consent-action]');
+        if (!action) {
+            return;
+        }
+        if (action.dataset.consentAction === 'customize') {
+            openPreferences();
+
+            return;
+        }
+        save(action.dataset.consentAction === 'accept-all' ? allCodes : []);
+    });
+
+    dialog.addEventListener('click', function (event) {
+        var action = event.target.closest('[data-consent-action]');
+        if (action) {
+            save(action.dataset.consentAction === 'accept-all' ? allCodes : []);
+        }
+    });
+
+    dialog.querySelector('[data-consent-form]').addEventListener('submit', function (event) {
+        event.preventDefault();
+        var checked = Array.prototype.map.call(dialog.querySelectorAll('input[name="consent_category"]:checked'), function (input) { return input.value; });
+        save(checked);
+    });
+
+    document.addEventListener('click', function (event) {
+        if (event.target.closest('[data-consent-open]')) {
+            openPreferences();
+        }
+    });
+
+    window.theliaConsent = {
+        has: function (category) { return granted.indexOf(category) !== -1; },
+        accepted: function () { return granted.slice(); },
+        open: openPreferences,
+    };
+
+    var choice = readChoice();
+    if (choice && choice.policy === config.policy) {
+        apply(choice.accepted.filter(function (code) { return allCodes.indexOf(code) !== -1; }));
+    } else {
+        apply(requiredCodes);
+        banner.hidden = false;
+    }
+})();
+</script>

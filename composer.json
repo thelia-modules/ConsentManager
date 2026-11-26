@@ -1,0 +1,15 @@
+{
+  "name": "thelia/consent-manager-module",
+  "description": "Cookie consent for Thelia: a banner with real choices, scripts that wait for the visitor's consent, and a record of every choice.",
+  "license": "GPL-3.0-or-later",
+  "type": "thelia-module",
+  "require": {
+    "thelia/installer": "^1.6"
+  },
+  "conflict": {
+    "thelia/flexy": "<1.5.0"
+  },
+  "extra": {
+    "installer-name": "ConsentManager"
+  }
+}

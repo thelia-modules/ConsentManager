@@ -1,0 +1,43 @@
+{% extends '@BackOfficeDefaultTwig/base.html.twig' %}
+
+{% set domain = 'consentmanager.bo.default' %}
+
+{% block title %}{{ page_title }} - {{ 'Consent manager'|trans({}, domain) }}{% endblock %}
+
+{% block breadcrumb %}
+	<nav aria-label="breadcrumb" class="mb-1">
+		<ol class="breadcrumb mb-0">
+			<li class="breadcrumb-item"><a href="{{ path('admin.home') }}">{{ 'Home'|trans }}</a></li>
+			<li class="breadcrumb-item"><a href="{{ path('consentmanager.admin.settings') }}">{{ 'Consent manager'|trans({}, domain) }}</a></li>
+			<li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
+		</ol>
+	</nav>
+{% endblock %}
+
+{% block content %}
+	<div class="container-fluid" data-testid="consentmanager-admin">
+		{% embed '@BackOfficeDefaultTwig/_page_header.html.twig' with { title: page_title } %}{% endembed %}
+
+		<ul class="nav nav-tabs mb-3">
+			{% for route, label in {
+				'consentmanager.admin.settings': 'Banner and durations',
+				'consentmanager.admin.categories': 'Categories',
+				'consentmanager.admin.services': 'Services',
+				'consentmanager.admin.records': 'Proofs of consent',
+			} %}
+				<li class="nav-item">
+					<a class="nav-link{% if app.request.attributes.get('_route') starts with route %} active" aria-current="page{% endif %}" href="{{ path(route) }}">{{ label|trans({}, domain) }}</a>
+				</li>
+			{% endfor %}
+		</ul>
+
+		{% for message in app.session.flashBag.get('consentmanager-success') %}
+			<div class="alert alert-success" role="status">{{ message }}</div>
+		{% endfor %}
+		{% for message in app.session.flashBag.get('consentmanager-error') %}
+			<div class="alert alert-danger" role="alert" data-testid="consentmanager-error">{{ message }}</div>
+		{% endfor %}
+
+		{% block page %}{% endblock %}
+	</div>
+{% endblock %}

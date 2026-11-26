@@ -1,0 +1,7 @@
+{# Always there, so the visitor can change their mind from any page. #}
+<li class="paragraph-5">
+    <button type="button" class="Footer-link ConsentManager-footerButton" data-consent-open data-testid="consent-manager-open">{{ 'Cookie settings'|trans({}, 'consentmanager.fo.default') }}</button>
+</li>
+<li class="paragraph-5">
+    <a href="{{ path('consentmanager.cookie_policy') }}" class="Footer-link" data-testid="consent-manager-policy-link">{{ 'Cookie policy'|trans({}, 'consentmanager.fo.default') }}</a>
+</li>

@@ -1,0 +1,56 @@
+{% extends '@ConsentManagerModule/backOffice/default-twig/ConsentManager/_layout.html.twig' %}
+
+{% set page_title = 'Banner and durations'|trans({}, 'consentmanager.bo.default') %}
+
+{% block page %}
+	<p class="text-muted">
+		{{ 'Current policy version: %version%, published on %date%. Any change to the banner, the categories or the services publishes a new version, and visitors are asked again.'|trans({'%version%': policy.id, '%date%': policy.created_at|date('Y-m-d H:i')}, domain) }}
+		{{ '%count% proofs recorded.'|trans({'%count%': record_count}, domain) }}
+	</p>
+
+	<form method="post" action="{{ path('consentmanager.admin.settings.save') }}" data-testid="consentmanager-settings-form">
+		<input type="hidden" name="_token" value="{{ assignToken() }}">
+
+		<div class="card mb-3">
+			<div class="card-header"><h2 class="h6 mb-0">{{ 'Banner'|trans({}, domain) }}</h2></div>
+			<div class="card-body">
+				<p class="text-muted small">{{ 'Leave empty to use the module wording. Have the text reviewed: it is a legal notice.'|trans({}, domain) }}</p>
+				{% for locale, banner in banners %}
+					<fieldset class="mb-3">
+						<legend class="h6">{{ banner.language }}</legend>
+						<div class="mb-2">
+							<label class="form-label" for="banner-title-{{ locale }}">{{ 'Title'|trans({}, domain) }}</label>
+							<input class="form-control" id="banner-title-{{ locale }}" name="banner[{{ locale }}][title]" value="{{ banner.title }}" maxlength="255">
+						</div>
+						<div>
+							<label class="form-label" for="banner-text-{{ locale }}">{{ 'Text'|trans({}, domain) }}</label>
+							<textarea class="form-control" id="banner-text-{{ locale }}" name="banner[{{ locale }}][text]" rows="3">{{ banner.text }}</textarea>
+						</div>
+						<div class="mt-2">
+							<label class="form-label" for="policy-intro-{{ locale }}">{{ 'Introduction of the cookie policy page'|trans({}, domain) }}</label>
+							<textarea class="form-control" id="policy-intro-{{ locale }}" name="banner[{{ locale }}][intro]" rows="3">{{ banner.intro }}</textarea>
+						</div>
+					</fieldset>
+				{% endfor %}
+			</div>
+		</div>
+
+		<div class="card mb-3">
+			<div class="card-header"><h2 class="h6 mb-0">{{ 'Durations'|trans({}, domain) }}</h2></div>
+			<div class="card-body row g-3">
+				<div class="col-md-6">
+					<label class="form-label" for="lifetime-days">{{ 'Days before the banner asks again'|trans({}, domain) }}</label>
+					<input class="form-control" type="number" min="1" max="395" id="lifetime-days" name="lifetime_days" value="{{ lifetime_days }}" required>
+					<div class="form-text">{{ 'At most 13 months (395 days).'|trans({}, domain) }}</div>
+				</div>
+				<div class="col-md-6">
+					<label class="form-label" for="retention-days">{{ 'Days a proof is kept'|trans({}, domain) }}</label>
+					<input class="form-control" type="number" min="0" id="retention-days" name="retention_days" value="{{ retention_days }}" required>
+					<div class="form-text">{{ '0 keeps them all. Older proofs are deleted by the maintenance:purge command.'|trans({}, domain) }}</div>
+				</div>
+			</div>
+		</div>
+
+		<button type="submit" class="btn btn-primary btn-sm">{{ 'Save'|trans({}, domain) }}</button>
+	</form>
+{% endblock %}
