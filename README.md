@@ -17,7 +17,7 @@ php Thelia module:activate ConsentManager
 
 The module ships inactive: the banner changes how the shop looks and its text is a legal notice the merchant must review before going live.
 
-It needs Thelia 3.2 and the Flexy theme (the banner uses Flexy's `Button`, `Modal` and `Checkbox` components and its `layout.body.bottom` and `layout.footer.links` hook points).
+It needs Thelia 3.2 and Flexy 1.5 or later (the banner uses Flexy's `Button`, `Modal` and `Checkbox` components and its `layout.body.bottom` and `layout.footer.links` hook points).
 
 ## Back-office
 

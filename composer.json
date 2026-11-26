@@ -6,6 +6,9 @@
   "require": {
     "thelia/installer": "^1.6"
   },
+  "conflict": {
+    "thelia/flexy": "<1.5.0"
+  },
   "extra": {
     "installer-name": "ConsentManager"
   }

@@ -92,8 +92,11 @@ class ConsentAdministration
         if (ConsentServiceQuery::create()->filterByCategoryId($id)->filterByCustom(1)->count() > 0) {
             throw new InvalidConsentChoiceException('Move or delete the services of this category first.');
         }
-        foreach ($this->catalog->declarations() as $declaration) {
-            if ($declaration->categoryCode === $category->getCode() && null === ConsentServiceQuery::create()->findOneByCode($declaration->code)) {
+        // Where each module service sits now: the merchant's choice when there is one, the
+        // module's suggestion otherwise. Deleting its category would hide it and block it for good.
+        $declarations = $this->catalog->declarations();
+        foreach ($this->catalog->serviceCategoryMap() as $serviceCode => $categoryCode) {
+            if ($categoryCode === $category->getCode() && isset($declarations[$serviceCode])) {
                 throw new InvalidConsentChoiceException('A module places one of its services in this category: move it to another one first.');
             }
         }
